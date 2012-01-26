@@ -79,8 +79,8 @@ Install using rubygems:
     %end
 
 ### Context script
-
 rpc.rb:
+
     {
         "Get" => {
             "std::string"  => "key",
@@ -94,16 +94,19 @@ rpc.rb:
     }
 
 rpc.hmpl:
+
     %self.each_pair do |name, args|
     void [%name%]( [%args.map {|type,name| "#{type} #{name}" }.join(", ")%] );
     %end
 
 run:
+
     mplex -c rpc.rb rpc.hmpl -o rpc.h
 
 ### Makefile
 
 source tree:
+
     README
     src/
 	src/subdir/
@@ -113,6 +116,7 @@ source tree:
     src/myapp.ccmpl    # myapp.ccmpl -> myapp.cc
 
 Makefile.am:
+
     MPLEX = ruby $(abs_srcdir)/mplex
     export MPLEX
     
