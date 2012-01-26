@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 #
 # Mplex: Extended Metaprogramming Library
 #
@@ -95,5 +96,82 @@ class Mplex
 		o << "@_mplexout"
 		# MPLEX_COMPILE_END
 	end
+end
+
+require 'optparse'
+
+op = OptionParser.new
+op.banner += " input..."
+
+finputs = "-"
+foutput = "-"
+fctx    = nil
+libs    = []
+script  = false
+
+op.on("-c file",    "context ruby script") {|v| fctx    = v   }
+op.on("-o file",    "output file")         {|v| foutput = v   }
+op.on("-r library", "load library")        {|v| libs   << v   }
+op.on("-x",         "print ruby script")   {|v| script = true }
+
+(class<<self;self;end).module_eval {
+	define_method(:usage) {
+		puts op.to_s
+		puts $! unless $!.to_s.empty?
+		exit 1
+	}
+}
+
+begin
+	op.parse!(ARGV)
+
+	usage if ARGV.empty?
+
+	finputs = ARGV
+
+	if (finputs + [fctx]).select {|x| x == "-" }.size >= 2
+		raise "multiple stdin"
+	end
+
+rescue
+	usage
+end
+
+def fread(path)
+	path == "-" ? $stdin.read : File.read(path)
+end
+
+def fname(path)
+	path == "-" ? "(stdin)" : path
+end
+
+libs.each {|lib| require lib }
+
+inputs = finputs.map {|f| [fread(f), fname(f)] }
+
+result = ""
+if script
+	inputs.each {|src, name|
+		result.concat Mplex.script(src)
+	}
+
+else
+	if fctx
+		b = nil; Object.instance_eval { b = binding }
+		ctx = eval("lambda{#{fread(fctx)}}.call", b, fname(fctx))
+	end
+	ctx ||= Object.new
+
+	inputs.each {|src, name|
+		Mplex.result(src, ctx, name, result)
+	}
+end
+
+if foutput == "-"
+	$stdout.write(result)
+else
+	File.open(foutput, "w") {|f|
+		f.write result
+	}
 end
 
